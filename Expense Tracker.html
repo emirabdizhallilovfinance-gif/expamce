@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Expense Tracker</title>
+<style>
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    --bg: #f1f3f8; --card: #ffffff; --text: #171c2c; --muted: #65708a; --line: #dde2ec;
+    --accent: #5b3fd1; --accent-text: #ffffff; --danger: #c2255c; --bar-bg: #e6e9f1;
+    --lum: 45%;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #11141d; --card: #1a1f2c; --text: #e8ebf4; --muted: #8b95ad; --line: #2b3347;
+      --accent: #9a85ff; --accent-text: #11141d; --danger: #ff7aa8; --bar-bg: #2b3347;
+      --lum: 62%;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #11141d; --card: #1a1f2c; --text: #e8ebf4; --muted: #8b95ad; --line: #2b3347;
+    --accent: #9a85ff; --accent-text: #11141d; --danger: #ff7aa8; --bar-bg: #2b3347;
+    --lum: 62%;
+    color-scheme: dark;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; padding: 24px 16px 48px; display: flex; justify-content: center; }
+  main { width: 100%; max-width: 480px; }
+  h1 { font-size: 1.4rem; margin: 0 0 16px; }
+  h2 { font-size: 1rem; margin: 0 0 12px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+  .nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .nav strong { font-size: 1.1rem; }
+  button { font: inherit; font-weight: 600; cursor: pointer; border: none; border-radius: 10px; padding: 11px 16px; background: var(--accent); color: var(--accent-text); }
+  button.alt { background: transparent; color: var(--text); border: 1px solid var(--line); }
+  button.icon { background: transparent; color: var(--muted); padding: 6px 10px; font-size: 18px; }
+  .total { font-size: 2.2rem; font-weight: 800; letter-spacing: -0.02em; }
+  .sub { color: var(--muted); font-size: 0.9rem; }
+  .bar { height: 10px; border-radius: 6px; background: var(--bar-bg); overflow: hidden; margin-top: 10px; }
+  .bar > i { display: block; height: 100%; border-radius: 6px; background: var(--accent); }
+  .bar > i.over { background: var(--danger); }
+  .cat { margin-bottom: 12px; }
+  .cat:last-child { margin-bottom: 0; }
+  .cat .top { display: flex; justify-content: space-between; font-size: 0.95rem; }
+  form { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  form .wide { grid-column: 1 / -1; }
+  input, select { width: 100%; padding: 12px; font: inherit; font-size: 16px; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; }
+  input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .item:last-child { border-bottom: none; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .item .info { flex: 1; min-width: 0; }
+  .item .name { overflow-wrap: anywhere; }
+  .item .amt { font-weight: 700; white-space: nowrap; }
+  .empty { color: var(--muted); text-align: center; padding: 8px 0; margin: 0; }
+  .settings { display: flex; gap: 8px; }
+  .settings label { flex: 1; font-size: 0.85rem; color: var(--muted); }
+  .settings input { margin-top: 4px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Expense Tracker</h1>
+
+  <div class="nav">
+    <button class="alt" id="prev" aria-label="Previous month">‹</button>
+    <strong id="monthLabel"></strong>
+    <button class="alt" id="next" aria-label="Next month">›</button>
+  </div>
+
+  <section class="card">
+    <div class="sub">Spent this month</div>
+    <div class="total" id="total"></div>
+    <div class="sub" id="budgetNote"></div>
+    <div class="bar" id="budgetBar" hidden><i id="budgetFill"></i></div>
+  </section>
+
+  <section class="card">
+    <h2>Add an expense</h2>
+    <form id="form">
+      <input type="number" id="amount" placeholder="Amount" step="0.01" min="0.01" inputmode="decimal" required aria-label="Amount">
+      <select id="cat" aria-label="Category"></select>
+      <input type="text" id="note" class="wide" placeholder="What was it for? (optional)" maxlength="80" aria-label="Note">
+      <input type="date" id="date" aria-label="Date">
+      <button type="submit">Add</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>By category</h2>
+    <div id="cats"></div>
+  </section>
+
+  <section class="card">
+    <h2>Expenses</h2>
+    <div id="list"></div>
+  </section>
+
+  <section class="card">
+    <h2>Settings</h2>
+    <div class="settings">
+      <label>Monthly budget<input type="number" id="budget" min="0" inputmode="decimal" placeholder="None"></label>
+      <label>Currency symbol<input type="text" id="currency" maxlength="4" placeholder="e.g. $"></label>
+    </div>
+  </section>
+</main>
+
+<script>
+  const CATS = ["Food", "Transport", "Shopping", "Bills", "Fun", "Health", "Other"];
+  const hue = c => CATS.indexOf(c) * 52 + 10;
+  const color = c => "hsl(" + hue(c) + " 65% var(--lum))";
+  const $ = id => document.getElementById(id);
+
+  let expenses = [], settings = { budget: 0, currency: "" };
+  try { expenses = JSON.parse(localStorage.getItem("expenses")) || []; } catch (e) {}
+  try { settings = Object.assign(settings, JSON.parse(localStorage.getItem("settings")) || {}); } catch (e) {}
+
+  const save = () => {
+    try {
+      localStorage.setItem("expenses", JSON.stringify(expenses));
+      localStorage.setItem("settings", JSON.stringify(settings));
+    } catch (e) {}
+  };
+
+  const pad = n => String(n).padStart(2, "0");
+  const today = () => { const d = new Date(); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); };
+  let view = new Date(); view.setDate(1);
+  const monthKey = d => d.getFullYear() + "-" + pad(d.getMonth() + 1);
+  const money = n => settings.currency + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  CATS.forEach(c => { const o = document.createElement("option"); o.value = o.textContent = c; $("cat").appendChild(o); });
+  $("date").value = today();
+  $("budget").value = settings.budget || "";
+  $("currency").value = settings.currency;
+
+  function render() {
+    const key = monthKey(view);
+    $("monthLabel").textContent = view.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+    const month = expenses.filter(e => e.date.startsWith(key)).sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+    const total = month.reduce((s, e) => s + e.amount, 0);
+    $("total").textContent = money(total);
+
+    // Budget
+    const hasBudget = settings.budget > 0;
+    $("budgetBar").hidden = !hasBudget;
+    if (hasBudget) {
+      const left = settings.budget - total;
+      $("budgetNote").textContent = left >= 0 ? money(left) + " left of " + money(settings.budget) : money(-left) + " over the " + money(settings.budget) + " budget";
+      const f = $("budgetFill");
+      f.style.width = Math.min(100, total / settings.budget * 100) + "%";
+      f.className = left < 0 ? "over" : "";
+    } else {
+      $("budgetNote").textContent = month.length + (month.length === 1 ? " expense" : " expenses");
+    }
+
+    // Category breakdown
+    const box = $("cats"); box.innerHTML = "";
+    const sums = CATS.map(c => [c, month.filter(e => e.cat === c).reduce((s, e) => s + e.amount, 0)]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]);
+    if (!sums.length) { const p = document.createElement("p"); p.className = "empty"; p.textContent = "Nothing to show yet."; box.appendChild(p); }
+    sums.forEach(([c, v]) => {
+      const row = document.createElement("div"); row.className = "cat";
+      const top = document.createElement("div"); top.className = "top";
+      const a = document.createElement("span"); a.textContent = c;
+      const b = document.createElement("span"); b.textContent = money(v) + " · " + Math.round(v / total * 100) + "%";
+      top.append(a, b);
+      const bar = document.createElement("div"); bar.className = "bar";
+      const fill = document.createElement("i"); fill.style.width = (v / sums[0][1] * 100) + "%"; fill.style.background = color(c);
+      bar.appendChild(fill); row.append(top, bar); box.appendChild(row);
+    });
+
+    // List
+    const list = $("list"); list.innerHTML = "";
+    if (!month.length) { const p = document.createElement("p"); p.className = "empty"; p.textContent = "No expenses this month."; list.appendChild(p); }
+    month.forEach(e => {
+      const row = document.createElement("div"); row.className = "item";
+      const dot = document.createElement("span"); dot.className = "dot"; dot.style.background = color(e.cat);
+      const info = document.createElement("div"); info.className = "info";
+      const name = document.createElement("div"); name.className = "name"; name.textContent = e.note || e.cat;
+      const meta = document.createElement("div"); meta.className = "sub"; meta.textContent = e.cat + " · " + e.date;
+      info.append(name, meta);
+      const amt = document.createElement("span"); amt.className = "amt"; amt.textContent = money(e.amount);
+      const del = document.createElement("button"); del.className = "icon"; del.textContent = "✕"; del.setAttribute("aria-label", "Delete expense");
+      del.onclick = () => { expenses = expenses.filter(x => x.id !== e.id); save(); render(); };
+      row.append(dot, info, amt, del); list.appendChild(row);
+    });
+  }
+
+  $("form").addEventListener("submit", ev => {
+    ev.preventDefault();
+    const amount = parseFloat($("amount").value);
+    if (!(amount > 0)) return;
+    const date = $("date").value || today();
+    expenses.push({ id: Date.now(), amount: Math.round(amount * 100) / 100, cat: $("cat").value, note: $("note").value.trim(), date });
+    $("amount").value = ""; $("note").value = "";
+    view = new Date(date + "T00:00:00"); view.setDate(1);
+    save(); render(); $("amount").focus();
+  });
+
+  $("prev").onclick = () => { view.setMonth(view.getMonth() - 1); render(); };
+  $("next").onclick = () => { view.setMonth(view.getMonth() + 1); render(); };
+  $("budget").addEventListener("change", () => { settings.budget = Math.max(0, parseFloat($("budget").value) || 0); save(); render(); });
+  $("currency").addEventListener("change", () => { settings.currency = $("currency").value.trim(); save(); render(); });
+
+  render();
+</script>
+</body>
+</html>
